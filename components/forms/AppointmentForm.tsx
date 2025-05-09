@@ -46,9 +46,7 @@ export const AppointmentForm = ({
     resolver: zodResolver(AppointmentFormValidation),
     defaultValues: {
       primaryPhysician: appointment?.primaryPhysician || "",
-      schedule: appointment?.schedule
-        ? new Date(appointment.schedule)
-        : new Date(),
+      schedule: appointment?.schedule ? new Date(appointment.schedule) : new Date(),
       reason: appointment?.reason || "",
       note: appointment?.note || "",
       cancellationReason: appointment?.cancellationReason || "",
@@ -60,21 +58,16 @@ export const AppointmentForm = ({
   ) => {
     setIsLoading(true);
 
-    let status: Status;
-    switch (type) {
-      case "schedule":
-        status = "scheduled";
-        break;
-      case "cancel":
-        status = "cancelled";
-        break;
-      default:
-        status = "pending";
-    }
+    const status: Status =
+      type === "schedule"
+        ? "scheduled"
+        : type === "cancel"
+        ? "cancelled"
+        : "pending";
 
     try {
       if (type === "create" && patientId) {
-        const newAppointment = await createAppointment({
+        const appointmentPayload = {
           userId,
           patient: patientId,
           primaryPhysician: values.primaryPhysician,
@@ -82,7 +75,9 @@ export const AppointmentForm = ({
           reason: values.reason!,
           status,
           note: values.note,
-        });
+        };
+
+        const newAppointment = await createAppointment(appointmentPayload);
 
         if (newAppointment) {
           form.reset();
@@ -91,17 +86,16 @@ export const AppointmentForm = ({
           );
         }
       } else if (appointment?.$id) {
-        const updatedAppointment = await updateAppointment({
+        const updatePayload = {
           userId,
           appointmentId: appointment.$id,
-          appointment: {
-            primaryPhysician: values.primaryPhysician,
-            schedule: new Date(values.schedule),
-            status,
-            cancellationReason: values.cancellationReason,
-          },
-          type,
-        });
+          primaryPhysician: values.primaryPhysician,
+          schedule: new Date(values.schedule),
+          status,
+          cancellationReason: values.cancellationReason,
+        };
+
+        const updatedAppointment = await updateAppointment(updatePayload);
 
         if (updatedAppointment) {
           setOpen?.(false);
@@ -109,18 +103,17 @@ export const AppointmentForm = ({
         }
       }
     } catch (error) {
-      console.error("Appointment error:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to submit appointment:", error);
     }
+
+    setIsLoading(false);
   };
 
-  const buttonLabel =
-    type === "cancel"
-      ? "Cancel Appointment"
-      : type === "schedule"
-      ? "Schedule Appointment"
-      : "Submit Appointment";
+  const buttonLabel = {
+    cancel: "Cancel Appointment",
+    schedule: "Schedule Appointment",
+    create: "Submit Appointment",
+  }[type];
 
   return (
     <Form {...form}>
@@ -145,7 +138,7 @@ export const AppointmentForm = ({
             >
               {Doctors.map((doctor, i) => (
                 <SelectItem key={doctor.name + i} value={doctor.name}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex cursor-pointer items-center gap-2">
                     <Image
                       src={doctor.image}
                       width={32}
@@ -169,7 +162,9 @@ export const AppointmentForm = ({
             />
 
             <div
-              className={`flex flex-col gap-6 ${type === "create" && "xl:flex-row"}`}
+              className={`flex flex-col gap-6 ${
+                type === "create" ? "xl:flex-row" : ""
+              }`}
             >
               <CustomFormField
                 fieldType={FormFieldType.TEXTAREA}
@@ -179,6 +174,7 @@ export const AppointmentForm = ({
                 placeholder="Annual monthly check-up"
                 disabled={type === "schedule"}
               />
+
               <CustomFormField
                 fieldType={FormFieldType.TEXTAREA}
                 control={form.control}
