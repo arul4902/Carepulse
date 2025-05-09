@@ -25,6 +25,7 @@ import { Form } from "../ui/form";
 type Status = "pending" | "scheduled" | "cancelled";
 
 interface AppointmentFormProps {
+  
   userId: string;
   patientId: string;
   type: "create" | "schedule" | "cancel";
@@ -141,7 +142,7 @@ export const AppointmentForm = ({
             >
               {Doctors.map((doctor, index) => (
                 <SelectItem key={`${doctor.name}-${index}`} value={doctor.name}>
-                  <div className="flex items-center gap-2 cursor-pointer">
+                  <div className="flex cursor-pointer items-center gap-2 ">
                     <Image
                       src={doctor.image}
                       width={32}
@@ -161,7 +162,7 @@ export const AppointmentForm = ({
               name="schedule"
               label="Expected appointment date"
               showTimeSelect
-              dateFormat="MM/dd/yyyy  -  h:mm aa"
+              dateFormat="MM/dd/yyyy  -  h:mm aa"
             />
 
             <div className={`flex flex-col gap-6 ${type === "create" ? "xl:flex-row" : ""}`}>

@@ -4,16 +4,29 @@ import { revalidatePath } from "next/cache";
 import { ID, Query } from "node-appwrite";
 
 import { Appointment } from "@/types/appwrite.types";
-
 import {
   APPOINTMENT_COLLECTION_ID,
   DATABASE_ID,
   databases,
   messaging,
 } from "../appwrite.config";
-import { formatDateTime, parseStringify } from "../utils";
+import { formatDateTime } from "../utils";
 
-//  CREATE APPOINTMENT
+// Generic-safe stringify/parse utility
+export function parseStringify<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
+// Appointment list response type
+export interface AppointmentListResponse {
+  totalCount: number;
+  scheduledCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  documents: Appointment[];
+}
+
+// CREATE APPOINTMENT
 export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
@@ -32,34 +45,14 @@ export const createAppointment = async (
   }
 };
 
-//  GET RECENT APPOINTMENTS
-export const getRecentAppointmentList = async () => {
+// GET RECENT APPOINTMENTS
+export const getRecentAppointmentList = async (): Promise<AppointmentListResponse> => {
   try {
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       [Query.orderDesc("$createdAt")]
     );
-
-    // const scheduledAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "scheduled");
-
-    // const pendingAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "pending");
-
-    // const cancelledAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "cancelled");
-
-    // const data = {
-    //   totalCount: appointments.total,
-    //   scheduledCount: scheduledAppointments.length,
-    //   pendingCount: pendingAppointments.length,
-    //   cancelledCount: cancelledAppointments.length,
-    //   documents: appointments.documents,
-    // };
 
     const initialCounts = {
       scheduledCount: 0,
@@ -85,25 +78,25 @@ export const getRecentAppointmentList = async () => {
       initialCounts
     );
 
-    const data = {
+    const data: AppointmentListResponse = {
       totalCount: appointments.total,
       ...counts,
-      documents: appointments.documents,
+      documents: appointments.documents as Appointment[],
     };
 
-    return parseStringify(data);
+    return parseStringify<AppointmentListResponse>(data);
   } catch (error) {
     console.error(
       "An error occurred while retrieving the recent appointments:",
       error
     );
+    throw error;
   }
 };
 
-//  SEND SMS NOTIFICATION
+// SEND SMS NOTIFICATION
 export const sendSMSNotification = async (userId: string, content: string) => {
   try {
-    // https://appwrite.io/docs/references/1.5.x/server-nodejs/messaging#createSms
     const message = await messaging.createSms(
       ID.unique(),
       content,
@@ -116,7 +109,7 @@ export const sendSMSNotification = async (userId: string, content: string) => {
   }
 };
 
-//  UPDATE APPOINTMENT
+// UPDATE APPOINTMENT
 export const updateAppointment = async ({
   appointmentId,
   userId,
@@ -125,7 +118,6 @@ export const updateAppointment = async ({
   type,
 }: UpdateAppointmentParams) => {
   try {
-    // Update appointment to scheduled -> https://appwrite.io/docs/references/cloud/server-nodejs/databases#updateDocument
     const updatedAppointment = await databases.updateDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
@@ -135,7 +127,18 @@ export const updateAppointment = async ({
 
     if (!updatedAppointment) throw Error;
 
-    const smsMessage = `Greetings from carepulse. ${type === "schedule" ? `Your appointment is confirmed for ${formatDateTime(appointment.schedule!, timeZone).dateTime} with Dr. ${appointment.primaryPhysician}` : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, timeZone).dateTime} is cancelled. Reason:  ${appointment.cancellationReason}`}.`;
+    const smsMessage = `Greetings from carepulse. ${
+      type === "schedule"
+        ? `Your appointment is confirmed for ${formatDateTime(
+            appointment.schedule!,
+            timeZone
+          ).dateTime} with Dr. ${appointment.primaryPhysician}`
+        : `We regret to inform that your appointment for ${formatDateTime(
+            appointment.schedule!,
+            timeZone
+          ).dateTime} is cancelled. Reason: ${appointment.cancellationReason}`
+    }.`;
+
     await sendSMSNotification(userId, smsMessage);
 
     revalidatePath("/admin");
@@ -157,7 +160,7 @@ export const getAppointment = async (appointmentId: string) => {
     return parseStringify(appointment);
   } catch (error) {
     console.error(
-      "An error occurred while retrieving the existing patient:",
+      "An error occurred while retrieving the existing appointment:",
       error
     );
   }

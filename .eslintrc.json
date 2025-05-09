@@ -8,6 +8,7 @@
   ],
   "rules": {
     "no-undef": "off",
+    "object-shorthand": ["error", "always"],
     "import/order": [
       "error",
       {

@@ -5,9 +5,17 @@ import { StatCard } from "@/components/StatCard";
 import { columns } from "@/components/table/columns";
 import { DataTable } from "@/components/table/DataTable";
 import { getRecentAppointmentList } from "@/lib/actions/appointment.actions";
+import { Appointment } from "@/types/appwrite.types"; // ✅ Make sure this is correct
+
+interface AppointmentListResponse {
+  scheduledCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  documents: Appointment[];
+}
 
 const AdminPage = async () => {
-  const appointments = await getRecentAppointmentList();
+  const appointments: AppointmentListResponse = await getRecentAppointmentList(); // ✅ Fix the unknown
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col space-y-14">
