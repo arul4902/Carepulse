@@ -12,10 +12,8 @@ import {
 } from "../appwrite.config";
 import { formatDateTime } from "../utils";
 
-// Generic-safe stringify/parse utility
-export function parseStringify<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data));
-}
+// Local utility function to safely parse stringified data
+const parseStringify = <T>(data: T): T => JSON.parse(JSON.stringify(data));
 
 // Appointment list response type
 export interface AppointmentListResponse {
@@ -41,7 +39,8 @@ export const createAppointment = async (
     revalidatePath("/admin");
     return parseStringify(newAppointment);
   } catch (error) {
-    console.error("An error occurred while creating a new appointment:", error);
+    console.error("Error creating appointment:", error);
+    throw error;
   }
 };
 
@@ -84,12 +83,9 @@ export const getRecentAppointmentList = async (): Promise<AppointmentListRespons
       documents: appointments.documents as Appointment[],
     };
 
-    return parseStringify<AppointmentListResponse>(data);
+    return parseStringify(data);
   } catch (error) {
-    console.error(
-      "An error occurred while retrieving the recent appointments:",
-      error
-    );
+    console.error("Error retrieving recent appointments:", error);
     throw error;
   }
 };
@@ -105,7 +101,8 @@ export const sendSMSNotification = async (userId: string, content: string) => {
     );
     return parseStringify(message);
   } catch (error) {
-    console.error("An error occurred while sending sms:", error);
+    console.error("Error sending SMS:", error);
+    throw error;
   }
 };
 
@@ -125,30 +122,25 @@ export const updateAppointment = async ({
       appointment
     );
 
-    if (!updatedAppointment) throw Error;
+    if (!updatedAppointment) throw new Error("Failed to update appointment");
 
-    const smsMessage = `Greetings from carepulse. ${
+    const formattedDate = formatDateTime(appointment.schedule!, timeZone).dateTime;
+    const smsMessage =
       type === "schedule"
-        ? `Your appointment is confirmed for ${formatDateTime(
-            appointment.schedule!,
-            timeZone
-          ).dateTime} with Dr. ${appointment.primaryPhysician}`
-        : `We regret to inform that your appointment for ${formatDateTime(
-            appointment.schedule!,
-            timeZone
-          ).dateTime} is cancelled. Reason: ${appointment.cancellationReason}`
-    }.`;
+        ? `Greetings from carepulse. Your appointment is confirmed for ${formattedDate} with Dr. ${appointment.primaryPhysician}.`
+        : `Greetings from carepulse. We regret to inform you that your appointment for ${formattedDate} is cancelled. Reason: ${appointment.cancellationReason}.`;
 
     await sendSMSNotification(userId, smsMessage);
 
     revalidatePath("/admin");
     return parseStringify(updatedAppointment);
   } catch (error) {
-    console.error("An error occurred while scheduling an appointment:", error);
+    console.error("Error updating appointment:", error);
+    throw error;
   }
 };
 
-// GET APPOINTMENT
+// GET SINGLE APPOINTMENT
 export const getAppointment = async (appointmentId: string) => {
   try {
     const appointment = await databases.getDocument(
@@ -159,9 +151,7 @@ export const getAppointment = async (appointmentId: string) => {
 
     return parseStringify(appointment);
   } catch (error) {
-    console.error(
-      "An error occurred while retrieving the existing appointment:",
-      error
-    );
+    console.error("Error retrieving appointment:", error);
+    throw error;
   }
 };
