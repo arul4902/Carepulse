@@ -24,26 +24,27 @@ import { Form } from "../ui/form";
 
 type Status = "pending" | "scheduled" | "cancelled";
 
+interface AppointmentFormProps {
+  userId: string;
+  patientId: string;
+  type: "create" | "schedule" | "cancel";
+  appointment?: Appointment;
+  setOpen?: Dispatch<SetStateAction<boolean>>;
+}
+
 export const AppointmentForm = ({
   userId,
   patientId,
   type = "create",
   appointment,
   setOpen,
-}: {
-  userId: string;
-  patientId: string;
-  type: "create" | "schedule" | "cancel";
-  appointment?: Appointment;
-  setOpen?: Dispatch<SetStateAction<boolean>>;
-}) => {
+}: AppointmentFormProps) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const AppointmentFormValidation = getAppointmentSchema(type);
-
-  const form = useForm<z.infer<typeof AppointmentFormValidation>>({
-    resolver: zodResolver(AppointmentFormValidation),
+  const schema = getAppointmentSchema(type);
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
     defaultValues: {
       primaryPhysician: appointment?.primaryPhysician || "",
       schedule: appointment?.schedule ? new Date(appointment.schedule) : new Date(),
@@ -53,9 +54,7 @@ export const AppointmentForm = ({
     },
   });
 
-  const onSubmit = async (
-    values: z.infer<typeof AppointmentFormValidation>
-  ) => {
+  const onSubmit = async (values: z.infer<typeof schema>) => {
     setIsLoading(true);
 
     const status: Status =
@@ -78,7 +77,6 @@ export const AppointmentForm = ({
         };
 
         const newAppointment = await createAppointment(appointmentPayload);
-
         if (newAppointment) {
           form.reset();
           router.push(
@@ -96,7 +94,6 @@ export const AppointmentForm = ({
         };
 
         const updatedAppointment = await updateAppointment(updatePayload);
-
         if (updatedAppointment) {
           setOpen?.(false);
           form.reset();
@@ -104,9 +101,9 @@ export const AppointmentForm = ({
       }
     } catch (error) {
       console.error("Failed to submit appointment:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const buttonLabel = {
@@ -117,7 +114,10 @@ export const AppointmentForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex-1 space-y-6"
+      >
         {type === "create" && (
           <section className="mb-12 space-y-4">
             <h1 className="header">New Appointment</h1>
@@ -136,9 +136,9 @@ export const AppointmentForm = ({
               label="Doctor"
               placeholder="Select a doctor"
             >
-              {Doctors.map((doctor, i) => (
-                <SelectItem key={doctor.name + i} value={doctor.name}>
-                  <div className="flex cursor-pointer items-center gap-2">
+              {Doctors.map((doctor, index) => (
+                <SelectItem key={`${doctor.name}-${index}`} value={doctor.name}>
+                  <div className="flex items-center gap-2 cursor-pointer">
                     <Image
                       src={doctor.image}
                       width={32}
@@ -161,11 +161,7 @@ export const AppointmentForm = ({
               dateFormat="MM/dd/yyyy  -  h:mm aa"
             />
 
-            <div
-              className={`flex flex-col gap-6 ${
-                type === "create" ? "xl:flex-row" : ""
-              }`}
-            >
+            <div className={`flex flex-col gap-6 ${type === "create" ? "xl:flex-row" : ""}`}>
               <CustomFormField
                 fieldType={FormFieldType.TEXTAREA}
                 control={form.control}
@@ -199,9 +195,9 @@ export const AppointmentForm = ({
 
         <SubmitButton
           isLoading={isLoading}
-          className={`${
+          className={`w-full ${
             type === "cancel" ? "shad-danger-btn" : "shad-primary-btn"
-          } w-full`}
+          }`}
         >
           {buttonLabel}
         </SubmitButton>
