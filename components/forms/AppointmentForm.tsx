@@ -88,9 +88,12 @@ export const AppointmentForm = ({
           userId,
           appointmentId: appointment.$id,
           primaryPhysician: values.primaryPhysician,
-          schedule: new Date(values.schedule),
+          schedule: new Date(values.schedule).toISOString(),
           status,
           cancellationReason: values.cancellationReason,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          appointment,
+          type,
         };
 
         const updatedAppointment = await updateAppointment(updatePayload);
