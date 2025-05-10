@@ -3,6 +3,12 @@ import Image from "next/image";
 import { AppointmentForm } from "@/components/forms/AppointmentForm";
 import { getPatient } from "@/lib/actions/patient.actions";
 
+interface SearchParamProps {
+  params: {
+    userId: string;
+  };
+}
+
 const Appointment = async ({ params: { userId } }: SearchParamProps) => {
   const patient = await getPatient(userId);
 
@@ -19,7 +25,7 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
           />
 
           <AppointmentForm
-            patientId={patient?.$id}
+            patientId={patient?.$id ?? ""}
             userId={userId}
             type="create"
           />

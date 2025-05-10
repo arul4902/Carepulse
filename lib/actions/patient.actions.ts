@@ -2,6 +2,8 @@
 
 import { ID, InputFile, Query } from "node-appwrite";
 
+import { Patient, AppwriteUser } from "@/types/appwrite.types";
+
 import {
   BUCKET_ID,
   DATABASE_ID,
@@ -14,8 +16,34 @@ import {
 } from "../appwrite.config";
 import { parseStringify } from "../utils";
 
-// CREATE APPWRITE USER
-export const createUser = async (user: CreateUserParams) => {
+interface CreateUserParams {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface RegisterUserParams extends CreateUserParams {
+  userId: string;
+  birthDate: Date;
+  gender: string;
+  address: string;
+  occupation: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  primaryPhysician: string;
+  insuranceProvider: string;
+  insurancePolicyNumber: string;
+  allergies?: string;
+  currentMedication?: string;
+  familyMedicalHistory?: string;
+  pastMedicalHistory?: string;
+  identificationType?: string;
+  identificationNumber?: string;
+  identificationDocument?: FormData;
+  privacyConsent: boolean;
+}
+
+export const createUser = async (user: CreateUserParams): Promise<AppwriteUser | undefined> => {
   try {
     const newuser = await users.create(
       ID.unique(),
@@ -25,31 +53,29 @@ export const createUser = async (user: CreateUserParams) => {
       user.name
     );
 
-    return parseStringify(newuser);
+    return parseStringify(newuser) as AppwriteUser;
   } catch (error: any) {
-    // Handle conflict (email already exists)
     if (error?.code === 409) {
       const existingUser = await users.list([
         Query.equal("email", [user.email]),
       ]);
-      return existingUser.users[0];
+      return existingUser.users[0] as AppwriteUser;
     }
 
     console.error("An error occurred while creating a new user:", error);
   }
 };
 
-// GET USER
-export const getUser = async (userId: string) => {
+export const getUser = async (userId: string): Promise<AppwriteUser> => {
   try {
     const user = await users.get(userId);
-    return parseStringify(user);
+    return user as AppwriteUser;
   } catch (error) {
     console.error("An error occurred while retrieving the user details:", error);
+    throw error;
   }
 };
 
-// REGISTER PATIENT
 export const registerPatient = async ({
   identificationDocument,
   ...patient
@@ -88,8 +114,7 @@ export const registerPatient = async ({
   }
 };
 
-// GET PATIENT
-export const getPatient = async (userId: string) => {
+export const getPatient = async (userId: string): Promise<Patient | null> => {
   try {
     if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
       throw new Error("Missing DATABASE_ID or PATIENT_COLLECTION_ID in config.");
@@ -101,8 +126,11 @@ export const getPatient = async (userId: string) => {
       [Query.equal("userId", [userId])]
     );
 
-    return parseStringify(patients.documents[0]);
+    if (!patients.documents.length) return null;
+
+    return parseStringify(patients.documents[0]) as Patient;
   } catch (error) {
     console.error("An error occurred while retrieving the patient details:", error);
+    return null;
   }
 };

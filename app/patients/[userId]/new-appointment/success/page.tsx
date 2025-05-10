@@ -1,3 +1,5 @@
+// app/(routes)/patients/[userId]/request-success/page.tsx
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -6,6 +8,15 @@ import { Doctors } from "@/constants";
 import { getAppointment } from "@/lib/actions/appointment.actions";
 import { formatDateTime } from "@/lib/utils";
 
+interface SearchParamProps {
+  searchParams: {
+    appointmentId?: string;
+  };
+  params: {
+    userId: string;
+  };
+}
+
 const RequestSuccess = async ({
   searchParams,
   params: { userId },
@@ -13,12 +24,20 @@ const RequestSuccess = async ({
   const appointmentId = (searchParams?.appointmentId as string) || "";
   const appointment = await getAppointment(appointmentId);
 
+  if (!appointment) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Appointment not found.</p>
+      </div>
+    );
+  }
+
   const doctor = Doctors.find(
     (doctor) => doctor.name === appointment.primaryPhysician
   );
 
   return (
-    <div className=" flex h-screen max-h-screen px-[5%]">
+    <div className="flex h-screen max-h-screen px-[5%]">
       <div className="success-img">
         <Link href="/">
           <Image
@@ -45,16 +64,20 @@ const RequestSuccess = async ({
         </section>
 
         <section className="request-details">
-          <p>Requested appointment details: </p>
+          <p>Requested appointment details:</p>
           <div className="flex items-center gap-3">
-            <Image
-              src={doctor?.image!}
-              alt="doctor"
-              width={100}
-              height={100}
-              className="size-6"
-            />
-            <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
+            {doctor && (
+              <>
+                <Image
+                  src={doctor.image}
+                  alt="doctor"
+                  width={100}
+                  height={100}
+                  className="size-6"
+                />
+                <p className="whitespace-nowrap">Dr. {doctor.name}</p>
+              </>
+            )}
           </div>
           <div className="flex gap-2">
             <Image
@@ -63,7 +86,7 @@ const RequestSuccess = async ({
               width={24}
               alt="calendar"
             />
-            <p> {formatDateTime(appointment.schedule).dateTime}</p>
+            <p>{formatDateTime(appointment.schedule).dateTime}</p>
           </div>
         </section>
 

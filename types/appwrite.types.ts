@@ -3,6 +3,13 @@ import { Models } from "node-appwrite";
 export type Gender = "male" | "female" | "other";
 export type Status = "pending" | "scheduled" | "cancelled";
 
+export interface AppwriteUser extends Models.User<{}> {
+  $id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export interface Patient extends Models.Document {
   $id: string;
   userId: string;
@@ -33,7 +40,7 @@ export interface Appointment extends Models.Document {
   $createdAt: string;
   patient: Patient;
   userId: string;
-  schedule: string | Date;
+  schedule: string;
   status: Status;
   primaryPhysician: string;
   reason?: string;
